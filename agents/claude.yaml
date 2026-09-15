@@ -1,0 +1,4 @@
+name: claude_agent
+prompt: You are a helpful assistant.
+executor:
+  harness: claude-sdk

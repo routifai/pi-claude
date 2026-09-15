@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harness Adapter Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html{color-scheme: light dark;}
+  :root{
+    --bg:#EEF0F3;
+    --surface:#FFFFFF;
+    --surface-2:#F7F8FA;
+    --border:#D6DAE1;
+    --text:#171A21;
+    --text-dim:#5B6472;
+    --accent:#2B6E8C;
+    --accent-strong:#1F5570;
+    --accent-soft:#E4EEF2;
+    --pill-fg:#FFFFFF;
+    --good-bg:#E4F3E9; --good-fg:#1E6B41;
+    --warn-bg:#FBF1E1; --warn-fg:#8A5A16;
+    --bad-bg:#FBE9E9; --bad-fg:#9A3232;
+    --shadow: 0 1px 2px rgba(23,26,33,.06), 0 6px 20px rgba(23,26,33,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12151B;
+      --surface:#1A1E26;
+      --surface-2:#20242D;
+      --border:#2C313C;
+      --text:#E7EAEF;
+      --text-dim:#9BA3B0;
+      --accent:#6FB6D6;
+      --accent-strong:#8FCBE6;
+      --accent-soft:#1E323C;
+      --pill-fg:#0D1116;
+      --good-bg:#173428; --good-fg:#6FD69B;
+      --warn-bg:#332A16; --warn-fg:#E3AE5E;
+      --bad-bg:#3A2020; --bad-fg:#EA9494;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12151B;
+    --surface:#1A1E26;
+    --surface-2:#20242D;
+    --border:#2C313C;
+    --text:#E7EAEF;
+    --text-dim:#9BA3B0;
+    --accent:#6FB6D6;
+    --accent-strong:#8FCBE6;
+    --accent-soft:#1E323C;
+    --pill-fg:#0D1116;
+    --good-bg:#173428; --good-fg:#6FD69B;
+    --warn-bg:#332A16; --warn-fg:#E3AE5E;
+    --bad-bg:#3A2020; --bad-fg:#EA9494;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    padding-inline:20px;
+    padding-block:48px 72px;
+    line-height:1.6;
+  }
+  .wrap{max-width:980px; margin-inline:auto;}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+
+  .eyebrow{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:600;
+    margin-bottom:12px;
+  }
+  h1{
+    font-size:clamp(28px,4vw,40px);
+    font-weight:700;
+    letter-spacing:-.01em;
+    text-wrap:balance;
+    margin:0 0 16px;
+  }
+  .dek{
+    color:var(--text-dim);
+    font-size:16.5px;
+    max-width:64ch;
+    margin:0 0 6px;
+  }
+  .path{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    align-items:center;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin:22px 0 0;
+    padding:12px 14px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+  }
+  .path b{color:var(--text); font-weight:600;}
+  .path .arrow{color:var(--border); opacity:.9;}
+  .path .hi{color:var(--accent); font-weight:600;}
+
+  section{margin-top:56px;}
+  h2{
+    font-size:22px;
+    font-weight:700;
+    margin:0 0 6px;
+    letter-spacing:-.005em;
+  }
+  .section-note{color:var(--text-dim); font-size:14.5px; margin:0 0 24px; max-width:68ch;}
+
+  /* spec cards */
+  .cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px,1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px 20px 22px;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .card.rec{
+    border-color:var(--accent);
+    background:linear-gradient(180deg, var(--accent-soft), var(--surface) 140px);
+  }
+  .card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .card-name{font-size:17px; font-weight:700; margin:0;}
+  .card-tag{color:var(--text-dim); font-size:13.5px; margin:2px 0 0;}
+  .pill{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:4px 8px;
+    border-radius:999px;
+    white-space:nowrap;
+    background:var(--accent);
+    color:var(--pill-fg);
+  }
+  .facts{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:5px 10px;
+    font-size:13px;
+    padding:12px;
+    background:var(--surface-2);
+    border-radius:8px;
+    border:1px solid var(--border);
+  }
+  .facts dt{color:var(--text-dim); font-family:"IBM Plex Mono", monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em;}
+  .facts dd{margin:0; font-weight:500;}
+  .list{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; font-size:14px;}
+  .list li{padding-left:18px; position:relative;}
+  .list.good li::before{content:"+"; position:absolute; left:0; color:var(--good-fg); font-weight:700;}
+  .list.limit li::before{content:"–"; position:absolute; left:0; color:var(--text-dim); font-weight:700;}
+  .list-label{font-family:"IBM Plex Mono", monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); margin-bottom:2px; display:block;}
+
+  /* table */
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:var(--shadow);}
+  table{border-collapse:collapse; width:100%; min-width:640px; font-size:14px;}
+  thead th{
+    text-align:left;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--text-dim);
+    font-weight:600;
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface-2);
+  }
+  thead th.rec-col{color:var(--accent-strong);}
+  tbody td{padding:13px 16px; border-bottom:1px solid var(--border); vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody td.dim{font-weight:600; color:var(--text); width:26%;}
+  tbody td.rec-col{background:var(--accent-soft);}
+  tbody tr:hover td{background:var(--surface-2);}
+  tbody tr:hover td.rec-col{background:var(--accent-soft);}
+  .v{display:inline-block; font-size:12.5px; font-weight:600; padding:3px 9px; border-radius:6px; margin-bottom:4px;}
+  .v.good{background:var(--good-bg); color:var(--good-fg);}
+  .v.warn{background:var(--warn-bg); color:var(--warn-fg);}
+  .v.bad{background:var(--bad-bg); color:var(--bad-fg);}
+  .v.neutral{background:var(--surface-2); color:var(--text-dim); border:1px solid var(--border);}
+  .cell-note{display:block; color:var(--text-dim); font-size:12.5px; margin-top:2px;}
+
+  /* callout */
+  .callout{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:3px solid var(--accent);
+    border-radius:10px;
+    padding:22px 24px;
+    box-shadow:var(--shadow);
+  }
+  blockquote{
+    margin:0 0 16px;
+    padding:0 0 0 14px;
+    border-left:2px solid var(--border);
+    color:var(--text-dim);
+    font-style:italic;
+    font-size:14.5px;
+  }
+  .callout p{margin:0 0 12px; font-size:15px;}
+  .callout p:last-child{margin-bottom:0;}
+  .callout strong{color:var(--text);}
+
+  /* verdict */
+  .verdict{
+    background:linear-gradient(135deg, var(--accent-soft), var(--surface) 60%);
+    border:1px solid var(--accent);
+    border-radius:12px;
+    padding:26px 26px 24px;
+  }
+  .verdict h2{color:var(--accent-strong);}
+  .verdict-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:10px 24px; margin:16px 0 18px;}
+  .verdict-grid div{font-size:14px; padding-left:16px; position:relative;}
+  .verdict-grid div::before{content:"→"; position:absolute; left:0; color:var(--accent);}
+  .caveat{
+    font-size:13.5px;
+    color:var(--text-dim);
+    border-top:1px solid var(--border);
+    padding-top:14px;
+    margin-top:4px;
+  }
+  .caveat b{color:var(--text);}
+
+  @media (max-width:600px){
+    .card-head{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="eyebrow">Hypatia · Architecture Decision</div>
+  <h1>Choosing the Harness Adapter</h1>
+  <p class="dek">Three ways to implement the layer between the Control Plane and the Harness Pod: Agent Client Protocol, Vercel's AI&nbsp;SDK harness layer, and Omnigent. Slight lean toward Omnigent below — with the reasoning shown, not asserted.</p>
+
+  <div class="path">
+    <span>Control Plane</span><span class="arrow">→</span>
+    <span class="hi">Harness Adapter</span><span class="arrow">→</span>
+    <span>Harness Pod</span><span class="arrow">→</span>
+    <span>Tool Workspace Broker</span><span class="arrow">→</span>
+    <span><b>Pi</b> / <b>Claude</b> / Future</span>
+  </div>
+
+  <section>
+    <h2>The three candidates</h2>
+    <p class="section-note">Same job — get the Control Plane talking to Pi, Claude, and whatever comes next — solved at three different layers.</p>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <p class="card-name">Agent Client Protocol</p>
+            <p class="card-tag">Wire protocol, not a runtime</p>
+          </div>
+        </div>
+        <dl class="facts">
+          <dt>Transport</dt><dd>JSON-RPC / stdio</dd>
+          <dt>Ships as</dt><dd>Spec + client &amp; agent libs</dd>
+          <dt>Owns sessions</dt><dd>No</dd>
+        </dl>
+        <div>
+          <span class="list-label">Strengths</span>
+          <ul class="list good">
+            <li>Editor-agnostic — Zed, JetBrains, Neovim, Emacs already speak it</li>
+            <li>ACP Registry (Jan 2026) for agent discovery</li>
+            <li>Composes natively with MCP</li>
+            <li>No runtime lock-in — it's just a contract</li>
+          </ul>
+        </div>
+        <div>
+          <span class="list-label">Limits here</span>
+          <ul class="list limit">
+            <li>You still build session, history, and routing yourself</li>
+            <li>No collaboration, persistence, or policy layer included</li>
+            <li>Remote transport still landing — local-process model today</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <p class="card-name">Vercel AI&nbsp;SDK Harness</p>
+            <p class="card-tag">TypeScript runtime, ACP-aware</p>
+          </div>
+        </div>
+        <dl class="facts">
+          <dt>Runtime</dt><dd>Node / TypeScript</dd>
+          <dt>Ships as</dt><dd>HarnessAgent API + sandbox</dd>
+          <dt>Owns sessions</dt><dd>Partially, per harness</dd>
+        </dl>
+        <div>
+          <span class="list-label">Strengths</span>
+          <ul class="list good">
+            <li>One API for Claude Code, Codex, Pi, Cursor, Cline, OpenCode…</li>
+            <li><code class="mono">@ai-sdk/harness-acp</code> wraps any ACP agent generically</li>
+            <li>Matches a Node/TS control-plane codebase directly</li>
+            <li>Vercel Sandbox gives isolation out of the box</li>
+          </ul>
+        </div>
+        <div>
+          <span class="list-label">Limits here</span>
+          <ul class="list limit">
+            <li>A runtime hop away from the Python side (LiteLLM, Llama Index)</li>
+            <li>Sandbox model leans on Vercel's own platform primitives</li>
+            <li>AI SDK 7 harness layer is new — thin track record</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card rec">
+        <div class="card-head">
+          <div>
+            <p class="card-name">Omnigent</p>
+            <p class="card-tag">Python meta-harness, batteries included</p>
+          </div>
+          <span class="pill">Slight lean</span>
+        </div>
+        <dl class="facts">
+          <dt>Runtime</dt><dd>Python 3.12+</dd>
+          <dt>Ships as</dt><dd>Server + session store + web UI</dd>
+          <dt>Owns sessions</dt><dd>Yes, its own model</dd>
+        </dl>
+        <div>
+          <span class="list-label">Strengths</span>
+          <ul class="list good">
+            <li>Drives the real CLI/SDK per harness — same native tool-calling, skills, subagents as running it directly</li>
+            <li>Widest list: Cursor, Antigravity, OpenCode, Hermes, Kiro, Qwen, Kimi, Copilot, Devin, Databricks…</li>
+            <li>Apache-2.0, self-hosted, no platform dependency</li>
+            <li>Same runtime as LiteLLM / Llama Index — no cross-process hop</li>
+          </ul>
+        </div>
+        <div>
+          <span class="list-label">Limits here</span>
+          <ul class="list limit">
+            <li>Owns its own session model — needs reconciling with Session Authority, not a replacement for it</li>
+            <li>Ships a server + web UI you may already have</li>
+            <li>Per-harness setup still varies — Pi needed its own <span class="mono">pi --mode rpc</span> + <span class="mono">auth.json</span> to talk at all</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Side by side</h2>
+    <p class="section-note">Nine dimensions that actually matter for the Harness&nbsp;Adapter / Harness&nbsp;Pod boundary in this diagram.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>ACP</th>
+            <th>Vercel AI&nbsp;SDK</th>
+            <th class="rec-col">Omnigent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="dim">What it is</td>
+            <td>Protocol spec</td>
+            <td>TS framework + sandbox</td>
+            <td class="rec-col">Python framework + server</td>
+          </tr>
+          <tr>
+            <td class="dim">Drives the real harness runtime</td>
+            <td><span class="v warn">Depends</span><span class="cell-note">only if the agent implements it</span></td>
+            <td><span class="v good">Yes</span><span class="cell-note">real CLI/SDK per harness</span></td>
+            <td class="rec-col"><span class="v good">Yes</span><span class="cell-note">real CLI/SDK per harness</span></td>
+          </tr>
+          <tr>
+            <td class="dim">Version control over the harness binary</td>
+            <td><span class="v warn">Indirect</span><span class="cell-note">via the agent's own packaging</span></td>
+            <td><span class="v good">Yes</span><span class="cell-note">pinned in the sandbox image</span></td>
+            <td class="rec-col"><span class="v good">Yes</span><span class="cell-note">local binary / venv per executor</span></td>
+          </tr>
+          <tr>
+            <td class="dim">Owns session &amp; history</td>
+            <td><span class="v bad">No</span><span class="cell-note">build it yourself</span></td>
+            <td><span class="v warn">Partial</span><span class="cell-note">per-harness session objects</span></td>
+            <td class="rec-col"><span class="v good">Yes</span><span class="cell-note">full session store</span></td>
+          </tr>
+          <tr>
+            <td class="dim">Self-hosted / vendor independence</td>
+            <td><span class="v good">Yes</span><span class="cell-note">spec only, no vendor</span></td>
+            <td><span class="v warn">Partial</span><span class="cell-note">sandbox ties to Vercel</span></td>
+            <td class="rec-col"><span class="v good">Yes</span><span class="cell-note">Apache-2.0, self-hosted</span></td>
+          </tr>
+          <tr>
+            <td class="dim">Language runtime</td>
+            <td><span class="v neutral">Any</span><span class="cell-note">it's a protocol</span></td>
+            <td>Node / TypeScript</td>
+            <td class="rec-col">Python</td>
+          </tr>
+          <tr>
+            <td class="dim">Fit with existing LiteLLM / Llama&nbsp;Index</td>
+            <td><span class="v neutral">N/A</span></td>
+            <td><span class="v bad">Cross-runtime hop</span></td>
+            <td class="rec-col"><span class="v good">Same runtime</span><span class="cell-note">no process hop</span></td>
+          </tr>
+          <tr>
+            <td class="dim">Collaboration &amp; web UI included</td>
+            <td><span class="v bad">None</span></td>
+            <td><span class="v bad">None</span><span class="cell-note">bring your own</span></td>
+            <td class="rec-col"><span class="v good">Ships one</span></td>
+          </tr>
+          <tr>
+            <td class="dim">Ecosystem maturity</td>
+            <td><span class="v warn">Young</span><span class="cell-note">growing fast, 2026</span></td>
+            <td><span class="v warn">Young</span><span class="cell-note">harness layer is new in AI SDK 7</span></td>
+            <td class="rec-col"><span class="v warn">Young</span><span class="cell-note">2026, Databricks-backed</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>On "you get access to their native stuff"</h2>
+    <div class="callout">
+      <blockquote>"…because it gives you the ability to run any version of these harnesses and you get access to their native stuff"</blockquote>
+      <p><strong>Half right, worth tightening.</strong> Native access is real: Omnigent doesn't reimplement Claude Code or Pi, it drives the actual SDK/CLI — <span class="mono">ClaudeSDKExecutor</span> runs the real Claude Agent SDK, <span class="mono">PiExecutor</span> literally shells out to <span class="mono">pi --mode rpc</span>. Whatever's installed locally is what runs, so native tool-calling, skills, and subagents all come through untouched.</p>
+      <p>But that part isn't unique to Omnigent. Vercel's harness layer does the exact same thing from Node — it also spawns the real CLI/SDK per harness rather than reimplementing it, and its sandbox images pin specific harness versions just as deliberately. Version pinning and native access are properties of <em>both</em> frameworks; only ACP alone falls short here, since a protocol spec doesn't run anything by itself.</p>
+      <p>The reasons that actually favor Omnigent for this diagram are narrower: it's <strong>Python</strong>, sitting in the same runtime as LiteLLM and Llama&nbsp;Index already in the Harness Pod, so there's no cross-language hop on every call. It's <strong>self-hosted</strong> with no platform dependency. And it already ships the session/collab/UI machinery this stack needs, rather than leaving it to be built on top of a bare adapter.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="verdict">
+      <h2>Verdict</h2>
+      <p>Lean Omnigent for the Harness&nbsp;Pod / execution side of this diagram — not because it uniquely unlocks native harness access, but because of what sits next to it.</p>
+      <div class="verdict-grid">
+        <div>Same runtime as LiteLLM &amp; Llama Index — no Node↔Python hop per call</div>
+        <div>Self-hosted, Apache-2.0 — no dependency on Vercel's sandbox platform</div>
+        <div>Widest harness list, including Databricks-oriented executors</div>
+        <div>ACP still worth adopting as the <em>wire contract</em> at the Harness Adapter boundary, independent of which runtime sits behind it</div>
+      </div>
+      <p class="caveat"><b>Caveat:</b> Omnigent wants to own sessions and history itself. Plugging it in means reconciling its session model with the Control Plane's Session Authority + Mongo — not routing around them.</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
