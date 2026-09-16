@@ -155,6 +155,8 @@
     <a href="#kinds">Two kinds of memory</a><span class="sep">/</span>
     <a href="#short-term">Short-term memory</a><span class="sep">/</span>
     <a href="#switching">What happens on a switch</a><span class="sep">/</span>
+    <a href="#worked-example">Worked example: Pi → Claude → Pi</a><span class="sep">/</span>
+    <a href="#storage">What lands in Postgres / SQLite</a><span class="sep">/</span>
     <a href="#long-term">Long-term memory (Hindsight)</a><span class="sep">/</span>
     <a href="#mem0">Considering Mem0</a><span class="sep">/</span>
     <a href="#summary">Summary</a>
@@ -251,6 +253,44 @@ tool call, or metadata event</span></pre>
     <div class="callout caution"><b>Known limitation.</b> Step 4 depends on the new executor being able to read the source harness's environment. In sandboxed or isolated-compute setups, a fork that provisions a brand-new sandbox may not have access to the original session's native log, and the reconstruction can silently fail — the new harness then starts with no carried history. Worth testing explicitly under whatever sandboxing model is chosen for a production deployment.</div>
   </section>
 
+  <section id="worked-example">
+    <h2>Worked example: Pi → Claude → Pi</h2>
+    <p class="section-note">Same session, three exchanges, harness changes twice. What does Pi see the second time around?</p>
+
+    <ol class="steps">
+      <li><b>Pi answers a question.</b> User asks Pi something; Pi replies. This exchange is written into Pi's own native session file — call it <span class="mono">file&nbsp;A</span> — and, in parallel, into the Omnigent session record.</li>
+      <li><b>Switch to Claude.</b> Switching between two <i>different</i> harnesses does not resume anything — it creates a fresh, distinct native session on the target side, seeded with the transferred context. A new Claude native session is created, pre-loaded with the Pi exchange from step 1 (translated into Claude's own format), and the next exchange is appended to it.</li>
+      <li><b>Switch back to Pi.</b> This is the part worth being precise about: it does <i>not</i> reopen <span class="mono">file&nbsp;A</span>. The same "different harness → fresh distinct target" rule applies again. Omnigent opens a <i>second</i>, new Pi native session — <span class="mono">file&nbsp;B</span> — and replays the entire accumulated history so far (Pi's exchange <i>and</i> Claude's exchange) into it, translated into Pi's own tree-structured format.</li>
+      <li><b>Pi answers again, inside file B.</b> Because file B was seeded with everything before Pi ever saw the new message, Pi answers with full awareness of its own earlier turn and of what Claude said in between — even though, as far as Pi's own log is concerned, this is a brand-new session that happens to already contain that history.</li>
+    </ol>
+
+    <div class="callout"><b>What Pi sees:</b> the complete conversation — its own first exchange plus Claude's exchange — because it was replayed into a new native session before Pi's second turn ran. Pi is not aware any of it came from a different harness; it reads as ordinary prior context in its own format.</div>
+
+    <div class="callout caution"><b>What's easy to miss:</b> on disk, Pi now has two separate native session files for what is one continuous conversation at the Omnigent level — <span class="mono">file&nbsp;A</span> (2 entries, now orphaned, never updated again) and <span class="mono">file&nbsp;B</span> (the full history, plus the new turn). Anyone inspecting Pi's own logs directly needs to know to look for the latest file, not assume there's only one per conversation.</div>
+  </section>
+
+  <section id="storage">
+    <h2>What lands in Postgres / SQLite</h2>
+    <p class="section-note">Regardless of which harness produced a turn, every message ends up as one row in one table. Rendered as a query against the same six-turn conversation above:</p>
+
+    <figure>
+      <figcaption>illustrative — column names are representative, not the literal schema</figcaption>
+      <pre><span class="dim">=&gt;</span> SELECT seq, role, harness, content FROM items
+   WHERE conversation_id = <span class="v">'...'</span> ORDER BY seq;
+
+ seq | role      | harness | content
+-----+-----------+---------+--------------------------------
+   1 | user      |         | What's 12 times 7?
+   2 | assistant | <span class="v">pi</span>      | 84.
+   3 | user      |         | Can you double check that?
+   4 | assistant | <span class="v">claude</span>  | Yes, 84 is correct.
+   5 | user      |         | Great, log that as today's answer.
+   6 | assistant | <span class="v">pi</span>      | Noted: 84.</pre>
+    </figure>
+
+    <p>Six rows, one table, one conversation — <code class="inline">harness</code> is just a column value, not a partition. There's no separate table per harness and no join required to read the full conversation back. This single table is what a new harness's native session gets reconstructed <i>from</i> at switch time (step 3 above); it's also what a control plane would read from directly if mirroring the conversation into a different datastore.</p>
+  </section>
+
   <section id="long-term">
     <h2>Long-term memory: Hindsight is the only native integration</h2>
     <p class="section-note">As of now, Hindsight is the only long-term memory provider with first-party support in Omnigent. No other memory provider ships as a built-in.</p>
@@ -308,7 +348,7 @@ tool call, or metadata event</span></pre>
   <footer>
     References
     <ol>
-      <li><a href="https://github.com/omnigent-ai/omnigent">omnigent-ai/omnigent</a> — architecture, executor model</li>
+      <li><a href="https://github.com/omnigent-ai/omnigent">omnigent-ai/omnigent</a> — architecture, executor model, fresh-target switching behavior</li>
       <li><a href="https://omnigent.ai/docs/deploy/database">Omnigent docs — Database</a> — storage backends</li>
       <li><a href="https://hindsight.vectorize.io/sdks/integrations/omnigent">Hindsight — Omnigent integration</a> — builtin tool wiring</li>
       <li><a href="https://hindsight.vectorize.io/blog/2026/07/16/bank-strategy-agent-memory">Hindsight — bank strategy guide</a></li>
