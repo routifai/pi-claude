@@ -67,6 +67,18 @@ PLAN_MODE_INSTRUCTION = (
     "you would do to fulfill the request, then stop. Do not execute the plan."
 )
 
+# Pi's own native plan-mode extension (npm:@narumitw/pi-plan-mode), if
+# installed. Loaded via Pi's real "--extension <path>" mechanism - the
+# same one omnigent itself uses internally to bridge its own tools into
+# Pi - plus the "--plan" CLI flag the extension registers once loaded.
+# Confirmed by direct testing: this produces genuine native plan-mode
+# output (structured Plan/Summary/Verification sections, refuses to
+# write files, offers to finalize the plan instead), not a prompt trick.
+PI_PLAN_MODE_EXTENSION = (
+    pathlib.Path.home() / ".pi" / "agent" / "npm" / "node_modules"
+    / "@narumitw" / "pi-plan-mode" / "src" / "index.ts"
+)
+
 
 def build_history_messages(session: dict) -> list[dict]:
     """Convert the session's merged transcript into omnigent's Message shape.
@@ -100,6 +112,8 @@ async def get_harness_reply(session_id: str, harness: str, session: dict) -> str
         # Executor cache key includes plan_mode: Claude's permission_mode is
         # set at construction time, so toggling plan mode needs a fresh
         # executor instance to actually take effect.
+        pi_extension_available = harness_type == "pi" and PI_PLAN_MODE_EXTENSION.is_file()
+
         executor_key = (session_id, harness, plan_mode)
         if executor_key not in executors:
             kwargs = {"agent_name": agent_def.name}
@@ -108,7 +122,13 @@ async def get_harness_reply(session_id: str, harness: str, session: dict) -> str
                 # (attempts ExitPlanMode / writes a plan doc instead of
                 # editing directly). Confirmed by direct testing.
                 kwargs["permission_mode"] = "plan" if plan_mode else "auto"
-            executors[executor_key] = executor_class(**kwargs)
+            executor = executor_class(**kwargs)
+            if plan_mode and pi_extension_available:
+                # Real Pi extension, loaded the same way omnigent loads its
+                # own tool-bridge extension into Pi. "--plan" is the CLI
+                # flag the extension itself registers once loaded.
+                executor._extra_args.extend(["--extension", str(PI_PLAN_MODE_EXTENSION), "--plan"])
+            executors[executor_key] = executor
 
         executor = executors[executor_key]
 
@@ -117,11 +137,10 @@ async def get_harness_reply(session_id: str, harness: str, session: dict) -> str
         messages = build_history_messages(session)
 
         system_prompt = agent_def.prompt or "You are a helpful assistant."
-        if plan_mode:
-            # Pi has no native plan/permission mode (confirmed absent from
-            # its executor source) - a prompt-level instruction is the
-            # harness-agnostic way to get equivalent "describe, don't act"
-            # behavior out of any harness, Claude included for consistency.
+        if plan_mode and not pi_extension_available and harness_type != "claude-sdk":
+            # Fallback for any harness with no native plan/permission mode
+            # and no equivalent extension installed - a prompt-level
+            # instruction is the harness-agnostic last resort.
             system_prompt += PLAN_MODE_INSTRUCTION
 
         response_text = ""
