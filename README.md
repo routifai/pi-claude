@@ -40,20 +40,24 @@ npm run dev
 
 Frontend runs at `http://localhost:5173` (Vite's default).
 
+Pi requires its own auth: `~/.pi/agent/auth.json` with `{"anthropic": {"type": "api_key", "key": "..."}}`.
+
 ## Test the Success Criterion
 
 1. Open `http://localhost:5173`.
 2. Click "New Session".
-3. Type a message → reply appears tagged "claude".
+3. Type a message → real reply from Claude, tagged "claude".
 4. Click the "Pi" button to switch harness.
-5. Type another message → reply appears tagged "pi", **in the same visible thread**.
-6. Reload the page / click "New Session" → both messages still there with correct harness tags.
+5. Type another message → real reply from Pi, tagged "pi", **in the same visible thread**.
+6. Switch back to Claude and ask it about something Pi said earlier — it knows, because the full transcript is passed on every turn, not just the latest message.
+7. Toggle "Plan Mode" on and repeat a request — the active harness describes a plan instead of acting, for either harness.
+8. Reload the page / click "New Session" → both messages still there with correct harness tags.
 
 ## Notes
 
-- **Multi-harness architecture validated.** Backend routes each harness to separate executor instances, merges replies into single transcript. Switching works cleanly.
-- **Claude SDK only.** Current backend uses `ClaudeSDKExecutor` for both Claude and Pi agents. The `harness: pi` field in Pi agent YAML is parsed but not acted upon — ClaudeSDKExecutor always uses Claude SDK. Real Pi support would require either:
-  - PiExecutor (needs `pi --mode rpc` running separately)
-  - omnigent HTTP API (bypass Python executors)
+- **Real Claude and Pi, both live.** `ClaudeSDKExecutor` and `PiExecutor` are used per their actual `harness` field — no shortcuts.
+- **Session isolation.** Executors are keyed by `(session_id, harness, plan_mode)`, so concurrent prototype sessions never share conversation state, and toggling plan mode gets a fresh executor with the right `permission_mode` for Claude.
+- **Cross-harness history.** Every call passes the full accumulated transcript (`build_history_messages()`), not just the latest message — this is what lets Claude answer using something Pi said earlier in the same session, and vice versa. The raw executor API (`run_turn()`) has no automatic carry-over between separate executor instances; the caller has to supply the whole conversation itself.
+- **Plan mode.** Claude gets a native `permission_mode="plan"` (confirmed to genuinely change behavior — it attempts `ExitPlanMode` / writes a plan doc instead of editing directly). Pi has no native equivalent (confirmed absent from its executor source), so plan mode there is a system-prompt instruction ("describe a plan, don't act") — the same instruction is added for Claude too, for consistent output shape across harnesses. See `omnigent-harness-extensions.md` for the full writeup of both extension points.
 - **In-memory sessions.** No persistence; all data lost on restart.
 - **Prototype scope.** Validates architectural feasibility for Hypatia; not production-ready.

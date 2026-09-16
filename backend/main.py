@@ -57,7 +57,33 @@ class HarnessSwitch(BaseModel):
     harness: Literal["claude", "pi"]
 
 
-async def get_harness_reply(session_id: str, harness: str, user_text: str) -> str:
+class PlanModeInput(BaseModel):
+    enabled: bool
+
+
+PLAN_MODE_INSTRUCTION = (
+    "\n\nPLAN MODE IS ACTIVE. Do not take any action or make any changes. "
+    "Instead, respond with a short, numbered plan describing exactly what "
+    "you would do to fulfill the request, then stop. Do not execute the plan."
+)
+
+
+def build_history_messages(session: dict) -> list[dict]:
+    """Convert the session's merged transcript into omnigent's Message shape.
+
+    Passing the FULL accumulated history (not just the latest turn) is what
+    lets a harness answer with awareness of turns produced by a different
+    harness earlier in the same session - the raw executor API has no
+    built-in carry-over between separate executor instances, so the caller
+    has to supply the whole conversation on every call.
+    """
+    return [
+        {"role": m["role"], "content": m["text"]}
+        for m in session["messages"]
+    ]
+
+
+async def get_harness_reply(session_id: str, harness: str, session: dict) -> str:
     """Query harness using proper executor, scoped to this prototype session."""
     try:
         agent_def = AGENT_CONFIGS.get(harness)
@@ -69,22 +95,41 @@ async def get_harness_reply(session_id: str, harness: str, user_text: str) -> st
         if not executor_class:
             return f"Error: No executor for harness {harness_type}"
 
-        # Create or reuse executor - one per (session, harness) pair so
-        # concurrent prototype sessions never share conversation state.
-        executor_key = (session_id, harness)
+        plan_mode = session.get("plan_mode", False)
+
+        # Executor cache key includes plan_mode: Claude's permission_mode is
+        # set at construction time, so toggling plan mode needs a fresh
+        # executor instance to actually take effect.
+        executor_key = (session_id, harness, plan_mode)
         if executor_key not in executors:
-            executors[executor_key] = executor_class(agent_name=agent_def.name)
+            kwargs = {"agent_name": agent_def.name}
+            if harness_type == "claude-sdk":
+                # Native switch - genuinely changes Claude's behavior
+                # (attempts ExitPlanMode / writes a plan doc instead of
+                # editing directly). Confirmed by direct testing.
+                kwargs["permission_mode"] = "plan" if plan_mode else "auto"
+            executors[executor_key] = executor_class(**kwargs)
 
         executor = executors[executor_key]
 
-        # Run turn with user message
-        messages = [{"role": "user", "content": user_text}]
+        # Full accumulated transcript, not just the latest message - see
+        # build_history_messages().
+        messages = build_history_messages(session)
+
+        system_prompt = agent_def.prompt or "You are a helpful assistant."
+        if plan_mode:
+            # Pi has no native plan/permission mode (confirmed absent from
+            # its executor source) - a prompt-level instruction is the
+            # harness-agnostic way to get equivalent "describe, don't act"
+            # behavior out of any harness, Claude included for consistency.
+            system_prompt += PLAN_MODE_INSTRUCTION
+
         response_text = ""
 
         async for event in executor.run_turn(
             messages=messages,
             tools=[],
-            system_prompt=agent_def.prompt or "You are a helpful assistant."
+            system_prompt=system_prompt,
         ):
             if hasattr(event, "text") and event.text:
                 response_text += str(event.text)
@@ -110,7 +155,8 @@ async def create_session():
     session_id = str(uuid.uuid4())
     sessions_map[session_id] = {
         "active_harness": "claude",
-        "messages": []
+        "messages": [],
+        "plan_mode": False,
     }
     return {"session_id": session_id}
 
@@ -126,6 +172,7 @@ async def get_session(session_id: str):
         "id": session_id,
         "messages": session["messages"],
         "active_harness": session["active_harness"],
+        "plan_mode": session.get("plan_mode", False),
     }
 
 
@@ -146,20 +193,26 @@ async def send_message(session_id: str, input_data: MessageInput):
         "harness": None
     })
 
-    # Get response from harness
-    reply_text = await get_harness_reply(session_id, active_harness, user_text)
+    # Get response from harness - session is passed (not just user_text) so
+    # the full accumulated transcript, across every harness used so far,
+    # goes into this turn.
+    reply_text = await get_harness_reply(session_id, active_harness, session)
+
+    plan_mode = session.get("plan_mode", False)
 
     # Add assistant reply with harness tag
     session["messages"].append({
         "role": "assistant",
         "text": reply_text,
-        "harness": active_harness
+        "harness": active_harness,
+        "plan_mode": plan_mode,
     })
 
     return {
         "session_id": session_id,
         "reply": reply_text,
         "harness": active_harness,
+        "plan_mode": plan_mode,
     }
 
 
@@ -176,4 +229,19 @@ async def switch_harness(session_id: str, switch_data: HarnessSwitch):
         "session_id": session_id,
         "active_harness": session["active_harness"],
         "message": f"Switched to {switch_data.harness}",
+    }
+
+
+@app.post("/api/sessions/{session_id}/plan-mode")
+async def set_plan_mode(session_id: str, plan_data: PlanModeInput):
+    """Toggle plan mode for the session's active harness (and any harness switched to next)."""
+    if session_id not in sessions_map:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = sessions_map[session_id]
+    session["plan_mode"] = plan_data.enabled
+
+    return {
+        "session_id": session_id,
+        "plan_mode": session["plan_mode"],
     }

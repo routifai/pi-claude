@@ -5,6 +5,7 @@ interface Message {
   role: "user" | "assistant";
   text: string;
   harness?: string | null;
+  plan_mode?: boolean;
 }
 
 interface Session {
@@ -20,6 +21,7 @@ export default function App() {
   const [activeHarness, setActiveHarness] = useState<"claude" | "pi">("claude");
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [planMode, setPlanMode] = useState(false);
 
   const createSession = async () => {
     const res = await fetch("/api/sessions", { method: "POST" });
@@ -27,6 +29,7 @@ export default function App() {
     setSessionId(data.session_id);
     setMessages([]);
     setActiveHarness("claude");
+    setPlanMode(false);
   };
 
   const sendMessage = async () => {
@@ -44,7 +47,7 @@ export default function App() {
       setMessages((prev) => [
         ...prev,
         { role: "user", text: inputText },
-        { role: "assistant", text: data.reply, harness: data.harness },
+        { role: "assistant", text: data.reply, harness: data.harness, plan_mode: data.plan_mode },
       ]);
       setInputText("");
     } finally {
@@ -59,6 +62,17 @@ export default function App() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ harness }),
+    });
+  };
+
+  const togglePlanMode = async () => {
+    if (!sessionId) return;
+    const next = !planMode;
+    setPlanMode(next);
+    await fetch(`/api/sessions/${sessionId}/plan-mode`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: next }),
     });
   };
 
@@ -93,6 +107,13 @@ export default function App() {
                 Pi
               </button>
             </div>
+            <button
+              className={`plan-mode-btn ${planMode ? "active" : ""}`}
+              onClick={togglePlanMode}
+              title="When on, the harness describes a plan instead of acting"
+            >
+              {planMode ? "Plan Mode: ON" : "Plan Mode: OFF"}
+            </button>
           </div>
 
           <div className="messages">
@@ -101,6 +122,7 @@ export default function App() {
                 <div className="message-header">
                   <span className="role">{msg.role}</span>
                   {msg.harness && <span className="harness">{msg.harness}</span>}
+                  {msg.plan_mode && <span className="plan-badge">PLAN</span>}
                 </div>
                 <div className="text">{msg.text}</div>
               </div>
