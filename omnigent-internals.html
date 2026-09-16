@@ -3,26 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inside Omnigent</title>
+<title>Omnigent Memory Architecture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   html{color-scheme: light dark;}
   :root{
-    --bg:#EEF0F3;
-    --surface:#FFFFFF;
-    --surface-2:#F7F8FA;
-    --border:#D6DAE1;
-    --text:#171A21;
-    --text-dim:#5B6472;
-    --accent:#2B6E8C;
-    --accent-strong:#1F5570;
-    --accent-soft:#E4EEF2;
-    --pill-fg:#FFFFFF;
+    --bg:#EEF0F3; --surface:#FFFFFF; --surface-2:#F7F8FA; --border:#D6DAE1;
+    --text:#171A21; --text-dim:#5B6472;
+    --accent:#2B6E8C; --accent-strong:#1F5570; --accent-soft:#E4EEF2;
     --good-bg:#E4F3E9; --good-fg:#1E6B41;
     --warn-bg:#FBF1E1; --warn-fg:#8A5A16;
-    --doc-bg:#E8EEF6; --doc-fg:#2C5A82;
     --term-bg:#181B22; --term-fg:#D6DCE5; --term-dim:#7C8698; --term-accent:#7FD1A8; --term-key:#E3AE5E;
     --shadow: 0 1px 2px rgba(23,26,33,.06), 0 6px 20px rgba(23,26,33,.05);
   }
@@ -31,10 +23,8 @@
       --bg:#12151B; --surface:#1A1E26; --surface-2:#20242D; --border:#2C313C;
       --text:#E7EAEF; --text-dim:#9BA3B0;
       --accent:#6FB6D6; --accent-strong:#8FCBE6; --accent-soft:#1E323C;
-      --pill-fg:#0D1116;
       --good-bg:#173428; --good-fg:#6FD69B;
       --warn-bg:#332A16; --warn-fg:#E3AE5E;
-      --doc-bg:#1B2A38; --doc-fg:#8FCBE6;
       --term-bg:#0E1015; --term-fg:#D6DCE5; --term-dim:#6B7482; --term-accent:#7FD1A8; --term-key:#E3AE5E;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
     }
@@ -43,10 +33,8 @@
     --bg:#12151B; --surface:#1A1E26; --surface-2:#20242D; --border:#2C313C;
     --text:#E7EAEF; --text-dim:#9BA3B0;
     --accent:#6FB6D6; --accent-strong:#8FCBE6; --accent-soft:#1E323C;
-    --pill-fg:#0D1116;
     --good-bg:#173428; --good-fg:#6FD69B;
     --warn-bg:#332A16; --warn-fg:#E3AE5E;
-    --doc-bg:#1B2A38; --doc-fg:#8FCBE6;
     --term-bg:#0E1015; --term-fg:#D6DCE5; --term-dim:#6B7482; --term-accent:#7FD1A8; --term-key:#E3AE5E;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
   }
@@ -57,49 +45,37 @@
     font-family:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
     padding-inline:20px; padding-block:48px 80px; line-height:1.65;
   }
-  .wrap{max-width:920px; margin-inline:auto;}
+  .wrap{max-width:900px; margin-inline:auto;}
   .mono{font-family:"IBM Plex Mono", ui-monospace, monospace;}
 
   .eyebrow{
     font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.11em;
     text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:12px;
   }
-  h1{font-size:clamp(28px,4vw,40px); font-weight:700; letter-spacing:-.01em; text-wrap:balance; margin:0 0 16px;}
-  .dek{color:var(--text-dim); font-size:16.5px; max-width:66ch; margin:0;}
+  h1{font-size:clamp(27px,4vw,38px); font-weight:700; letter-spacing:-.01em; text-wrap:balance; margin:0 0 16px;}
+  .dek{color:var(--text-dim); font-size:16px; max-width:68ch; margin:0;}
 
-  section{margin-top:52px;}
+  nav.toc{
+    display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:26px;
+    padding:14px 16px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; font-size:13px;
+  }
+  nav.toc a{color:var(--accent-strong); text-decoration:none; font-weight:500;}
+  nav.toc a:hover{text-decoration:underline;}
+  nav.toc span.sep{color:var(--border);}
+
+  section{margin-top:50px; scroll-margin-top:20px;}
   h2{font-size:21px; font-weight:700; margin:0 0 6px; letter-spacing:-.005em; text-wrap:balance;}
-  h3{font-size:15.5px; font-weight:600; margin:22px 0 10px; color:var(--text);}
+  h3{font-size:15px; font-weight:600; margin:24px 0 10px; color:var(--text);}
   .section-note{color:var(--text-dim); font-size:14.5px; margin:0 0 20px; max-width:68ch;}
   p{margin:0 0 12px; font-size:15px;}
   p:last-child{margin-bottom:0;}
 
-  /* provenance badges */
-  .legend{
-    display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center;
-    background:var(--surface); border:1px solid var(--border); border-radius:10px;
-    padding:14px 16px; margin-top:22px; font-size:13px; color:var(--text-dim);
-  }
-  .legend b{color:var(--text); font-weight:600; margin-right:2px;}
-  .badge{
-    display:inline-flex; align-items:center; gap:5px;
-    font-family:"IBM Plex Mono", monospace; font-size:10.5px; font-weight:600;
-    letter-spacing:.03em; text-transform:uppercase;
-    padding:3px 8px; border-radius:5px; white-space:nowrap;
-  }
-  .badge.observed{background:var(--good-bg); color:var(--good-fg);}
-  .badge.documented{background:var(--doc-bg); color:var(--doc-fg);}
-  .badge.illustrative{background:var(--warn-bg); color:var(--warn-fg);}
-  .badge::before{content:"●"; font-size:8px;}
-
-  /* figure = code/log block with a caption+badge header */
   figure{margin:16px 0 22px; border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:var(--shadow);}
   figcaption{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
     padding:9px 14px; background:var(--surface-2); border-bottom:1px solid var(--border);
     font-family:"IBM Plex Mono", monospace; font-size:12px; color:var(--text-dim);
   }
-  figcaption .path{color:var(--text); font-weight:500;}
   pre{
     margin:0; padding:16px 18px; background:var(--term-bg); color:var(--term-fg);
     font-family:"IBM Plex Mono", monospace; font-size:12.8px; line-height:1.65;
@@ -121,8 +97,8 @@
     padding:14px 16px; font-size:14px; margin:14px 0 22px;
   }
   .callout b{color:var(--text);}
+  .callout.caution{background:var(--warn-bg); border-color:var(--warn-fg);}
 
-  /* pipeline diagram */
   .pipeline{display:flex; flex-wrap:wrap; align-items:stretch; gap:0; margin:20px 0 8px;}
   .pnode{
     flex:1 1 140px; background:var(--surface); border:1px solid var(--border); border-radius:10px;
@@ -130,18 +106,23 @@
     min-width:140px;
   }
   .pnode .t{font-family:"IBM Plex Mono", monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim);}
-  .pnode .n{font-weight:600; font-size:14.5px;}
-  .parrow{
-    display:flex; align-items:center; justify-content:center; padding:0 8px;
-    color:var(--text-dim); font-size:18px; flex:0 0 auto;
-  }
+  .pnode .n{font-weight:600; font-size:14px;}
+  .parrow{display:flex; align-items:center; justify-content:center; padding:0 8px; color:var(--text-dim); font-size:18px; flex:0 0 auto;}
   .pnode.hub{border-color:var(--accent); background:linear-gradient(180deg, var(--accent-soft), var(--surface) 90%);}
-  @media (max-width:640px){
-    .pipeline{flex-direction:column;}
-    .parrow{transform:rotate(90deg); padding:6px 0;}
+  @media (max-width:640px){ .pipeline{flex-direction:column;} .parrow{transform:rotate(90deg); padding:6px 0;} }
+
+  .two-col{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:16px; margin:16px 0 8px;}
+
+  ol.steps{margin:0; padding:0; list-style:none; counter-reset:step; display:flex; flex-direction:column; gap:12px;}
+  ol.steps li{padding-left:34px; position:relative; font-size:14.5px;}
+  ol.steps li::before{
+    counter-increment:step; content:counter(step);
+    position:absolute; left:0; top:-1px;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--accent); color:#fff; font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600;
+    display:flex; align-items:center; justify-content:center;
   }
 
-  /* schema table */
   .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:var(--shadow);}
   table{border-collapse:collapse; width:100%; min-width:480px; font-size:13.5px;}
   thead th{
@@ -152,245 +133,189 @@
   tbody td{padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top;}
   tbody tr:last-child td{border-bottom:none;}
   tbody td.field{font-family:"IBM Plex Mono", monospace; font-weight:500; white-space:nowrap;}
-  tbody td.type{color:var(--text-dim); font-family:"IBM Plex Mono", monospace; font-size:12.5px; white-space:nowrap;}
-
-  .two-col{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:16px; margin:16px 0 8px;}
 
   ul.takeaways{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px;}
   ul.takeaways li{padding-left:22px; position:relative; font-size:14.5px;}
   ul.takeaways li::before{content:"→"; position:absolute; left:0; color:var(--accent); font-weight:600;}
 
   footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-dim);}
+  footer ol{margin:8px 0 0; padding-left:18px;}
+  footer li{margin-bottom:4px;}
   footer a{color:var(--accent);}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <div class="eyebrow">Hypatia · Omnigent Internals</div>
-  <h1>Inside Omnigent: one request, traced end to end</h1>
-  <p class="dek">What actually happens when a message goes to Pi, gets translated, and lands somewhere — and what happens (and doesn't) when the harness switches to Claude mid-conversation. Grounded in what we ran ourselves, marked against what's documented.</p>
+  <div class="eyebrow">Hypatia · Reference</div>
+  <h1>Omnigent Memory Architecture</h1>
+  <p class="dek">How Omnigent handles memory when a session runs across more than one harness — Claude, Pi, or any other agent it wraps. Covers short-term (conversational) memory, long-term (cross-session) memory via Hindsight, and what changes if Mem0 is used instead.</p>
 
-  <div class="legend">
-    <span><b>Reading this doc:</b></span>
-    <span class="badge observed">Observed</span> we ran this and captured the real output
-    <span class="badge documented">Documented</span> from Omnigent/Hindsight's own docs, not run here
-    <span class="badge illustrative">Illustrative</span> representative shape, not a literal capture
-  </div>
+  <nav class="toc">
+    <a href="#kinds">Two kinds of memory</a><span class="sep">/</span>
+    <a href="#short-term">Short-term memory</a><span class="sep">/</span>
+    <a href="#switching">What happens on a switch</a><span class="sep">/</span>
+    <a href="#long-term">Long-term memory (Hindsight)</a><span class="sep">/</span>
+    <a href="#mem0">Considering Mem0</a><span class="sep">/</span>
+    <a href="#summary">Summary</a>
+  </nav>
 
-  <section>
-    <h2>The translation layer, in one picture</h2>
-    <p class="section-note">Pi and Claude never talk to each other, and neither talks to Postgres directly. Everything routes through one shared shape in the middle.</p>
-    <div class="pipeline">
-      <div class="pnode"><span class="t">Native</span><span class="n">Pi RPC stream</span></div>
-      <div class="parrow">→</div>
-      <div class="pnode hub"><span class="t">Runner translates</span><span class="n">omnigent.Message</span></div>
-      <div class="parrow">←</div>
-      <div class="pnode"><span class="t">Native</span><span class="n">Claude rollout (.jsonl)</span></div>
-    </div>
-    <div class="pipeline" style="margin-top:14px;">
-      <div class="pnode hub" style="flex-grow:0; flex-basis:220px;"><span class="t">Shared record</span><span class="n">Session items</span></div>
-      <div class="parrow">→</div>
-      <div class="pnode"><span class="t">Persisted to</span><span class="n">Postgres / SQLite</span></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>The common item format</h2>
-    <p class="section-note">Every executor — <code class="inline">ClaudeSDKExecutor</code>, <code class="inline">PiExecutor</code> — takes the same input type and yields the same event type, regardless of what's underneath.</p>
-
-    <figure>
-      <figcaption><span class="path">omnigent.Message — the shape both harnesses get translated into</span><span class="badge observed">Observed</span></figcaption>
-      <pre><span class="dim">&gt;&gt;&gt;</span> <span class="k">from</span> omnigent <span class="k">import</span> Message
-<span class="dim">&gt;&gt;&gt;</span> Message(role=<span class="v">"user"</span>, content=<span class="v">"Who are you?"</span>)
-Message(
-    role=<span class="v">'user'</span>,          <span class="comment"># system | user | assistant | tool_call | tool_result</span>
-    content=<span class="v">'Who are you?'</span>,
-    timestamp=datetime.datetime(2026, 9, 15, 20, 38, 0),
-    source=<span class="k">None</span>,
-    metadata={}
-)</pre>
-    </figure>
-
-    <p>This is the only shape the runner, the Session, and the Postgres store ever see. Whatever Pi says over RPC, whatever Claude's SDK streams back — both get folded into <code class="inline">Message</code> objects before anything is recorded. Neither harness is aware this translation is happening.</p>
-  </section>
-
-  <section>
-    <h2>Two native worlds underneath</h2>
-    <p class="section-note">Before translation, each harness keeps its own state, in its own format, in its own place.</p>
-
-    <div class="two-col">
-      <figure style="margin:0;">
-        <figcaption><span class="path">~/.pi/agent/</span><span class="badge observed">Observed</span></figcaption>
-        <pre>auth.json          <span class="dim">2 B   — provider credentials</span>
-settings.json      <span class="dim">237 B — extensions, skills</span>
-models-store.json  <span class="dim">292 KB — model catalog cache</span>
-cowork-meta.json   <span class="dim">25 B</span></pre>
-      </figure>
-      <figure style="margin:0;">
-        <figcaption><span class="path">~/.claude/&lt;session-id&gt;.jsonl</span><span class="badge documented">Documented</span></figcaption>
-        <pre>{"role":"user", "content":"...", "ts":...}
-{"role":"assistant","content":"...","ts":...}
-<span class="dim">one native "rollout" file per session —
-Claude Code's own turn-by-turn log</span></pre>
-      </figure>
-    </div>
-    <p style="margin-top:14px;">Pi's actual turn-by-turn conversation lives inside the running <code class="inline">pi --mode rpc</code> process — PiExecutor talks to it over that RPC stream, it never reads a flat file. Claude Code keeps its own append-only <code class="inline">.jsonl</code> rollout per session on disk; this is the exact file a documented Omnigent bug references when a sandbox fork can't reach it (see below).</p>
-  </section>
-
-  <section>
-    <h2>What we actually saw cross the wire</h2>
-    <p class="section-note">Two real calls against our own running Omnigent server, captured verbatim.</p>
-
-    <h3>Creating a Claude session</h3>
-    <figure>
-      <figcaption><span class="path">POST /v1/sessions</span><span class="badge observed">Observed</span></figcaption>
-      <pre><span class="dim">$</span> curl -X POST http://localhost:6767/v1/sessions \
-    -d <span class="v">'{"agent_id":"58a1bc5b...","title":"Claude test"}'</span>
-
-{
-  <span class="k">"id"</span>: <span class="v">"a465bd2d98044ad08da4b71737787846"</span>,
-  <span class="k">"agent_name"</span>: <span class="v">"claude-native-ui"</span>,
-  <span class="k">"harness"</span>: <span class="v">"claude-native"</span>,
-  <span class="k">"status"</span>: <span class="v">"idle"</span>,
-  <span class="k">"items"</span>: []
-}</pre>
-    </figure>
-
-    <h3>Switching that same session to Pi</h3>
-    <figure>
-      <figcaption><span class="path">POST /v1/sessions/{id}/switch-agent</span><span class="badge observed">Observed</span></figcaption>
-      <pre><span class="dim">$</span> curl -X POST http://localhost:6767/v1/sessions/9151d37.../switch-agent \
-    -d <span class="v">'{"agent_id":"a1b7caa1..."}'</span>
-
-{
-  <span class="k">"id"</span>: <span class="v">"9151d37b8e68447086b757e3f8e77e7d"</span>,
-  <span class="k">"agent_name"</span>: <span class="v">"pi-native-ui"</span>,
-  <span class="k">"harness"</span>: <span class="v">"pi-native"</span>,
-  <span class="k">"labels"</span>: {
-    <span class="k">"omnigent.fork.carry_history"</span>: <span class="v">"1"</span>,
-    <span class="k">"omnigent.switch.previous_builtin_id"</span>: <span class="v">"58a1bc5b..."</span>
-  }
-}</pre>
-    </figure>
-    <div class="callout"><b>carry_history: "1"</b> — the server is telling you the prior conversation was carried into Pi's own native session on this switch. This is the built-in path. Our prototype backend never called it.</div>
-
-    <h3>What our backend called instead — and what Claude actually saw</h3>
-    <figure>
-      <figcaption><span class="path">backend/main.py — get_harness_reply()</span><span class="badge observed">Observed</span></figcaption>
-      <pre><span class="k">if</span> executor_key <span class="k">not in</span> executors:
-    executors[executor_key] = executor_class(agent_name=agent_def.name)
-
-executor = executors[executor_key]
-messages = [{<span class="v">"role"</span>: <span class="v">"user"</span>, <span class="v">"content"</span>: user_text}]  <span class="comment"># ← only the latest turn</span>
-
-<span class="k">async for</span> event <span class="k">in</span> executor.run_turn(messages=messages, ...):
-    ...</pre>
-    </figure>
-    <p>One message, every call — never the accumulated transcript, never routed through <code class="inline">switch-agent</code>. Result, from the real run:</p>
-    <figure>
-      <figcaption><span class="path">actual transcript, same prototype session</span><span class="badge observed">Observed</span></figcaption>
-      <pre><span class="dim">→ Claude:</span> "Claude. AI assistant built by Anthropic. Haiku 4.5 model.
-           Current project: /Users/simo/milhe-harness-prototype/backend"
-
-<span class="dim">[switched to Pi]</span>
-
-<span class="dim">→ Pi:</span>     "I'm pi, a coding assistant. I can help you read files, run
-           commands, edit code, and write new files in your project."
-
-<span class="dim">[switched back to Claude]</span>
-
-<span class="dim">→ Claude:</span> "Understood. Session closed. Safe."   <span class="comment">// no memory of Pi's turn</span></pre>
-    </figure>
-    <p>That last Claude reply is the proof: raw <code class="inline">run_turn()</code> calls don't inherit the native carry-over the server's own <code class="inline">switch-agent</code> endpoint provides. We built a workaround for something Omnigent already solves — we just called the wrong layer.</p>
-  </section>
-
-  <section>
-    <h2>Where it's actually stored</h2>
-
-    <h3>Right now: SQLite, on this machine</h3>
-    <figure>
-      <figcaption><span class="path">omnigent server status</span><span class="badge observed">Observed</span></figcaption>
-      <pre><span class="dim">$</span> ps aux | grep omnigent
-.../omnigent/bin/python -m omnigent.cli server \
-  --host 127.0.0.1 --port 6767 \
-  --database-uri <span class="v">sqlite:////Users/simo/.omnigent/chat.db</span> \
-  --artifact-location /Users/simo/.omnigent/artifacts</pre>
-    </figure>
-    <p>Every session, message, and tool call from this entire exploration is sitting in that one file, right now, on local disk.</p>
-
-    <h3>Production: same schema, Postgres</h3>
-    <figure>
-      <figcaption><span class="path">deploy config</span><span class="badge documented">Documented</span></figcaption>
-      <pre><span class="k">export</span> OMNIGENT_DATABASE_URI=<span class="v">"postgresql+psycopg://user:pass@host:5432/omnigent"</span>
-omnigent server --database-uri <span class="v">"$OMNIGENT_DATABASE_URI"</span></pre>
-    </figure>
-    <p>Same Alembic migrations, same tables, run against either backend — SQLite and Postgres are schema-compatible, not two different data models. No MongoDB backend exists.</p>
-
+  <section id="kinds">
+    <h2>Two kinds of memory</h2>
+    <p class="section-note">The word "memory" covers two different problems. Omnigent solves them differently.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Table</th><th>Field</th><th>Type</th></tr></thead>
+        <thead><tr><th></th><th>Short-term</th><th>Long-term</th></tr></thead>
         <tbody>
-          <tr><td class="field">conversations</td><td class="field">id, agent_id, harness, title, labels</td><td class="type">uuid, text, text, text, jsonb</td></tr>
-          <tr><td class="field">items</td><td class="field">id, conversation_id, role, content, metadata</td><td class="type">uuid, uuid, text, text, jsonb</td></tr>
-          <tr><td class="field">items</td><td class="field">created_at</td><td class="type">timestamptz</td></tr>
+          <tr><td class="field">Scope</td><td>One conversation / one session</td><td>Across sessions, indefinitely</td></tr>
+          <tr><td class="field">Contains</td><td>The turns exchanged so far</td><td>Distilled facts, preferences, decisions</td></tr>
+          <tr><td class="field">Owned by</td><td>The Omnigent session</td><td>A Hindsight memory bank</td></tr>
+          <tr><td class="field">Lifetime</td><td>Ends when the session ends</td><td>Persists after the session closes</td></tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-top:10px;"><span class="badge illustrative">Illustrative</span>&nbsp; representative shape based on documented behavior ("every conversation, message and tool call is persisted") — not a literal schema dump.</p>
-
-    <div class="callout">If the goal is genuinely one Mongo record for the conversation: Omnigent won't write there natively. The Control Plane would read this <code class="inline">items</code> table (or the same normalized <code class="inline">Message</code> stream at the API layer) and mirror it into Mongo itself.</div>
   </section>
 
-  <section>
-    <h2>Extending to long-term: Hindsight</h2>
-    <p class="section-note">The Postgres store above is the short-term, per-conversation record. Long-term recall across conversations is a separate store, wired in as ordinary tool calls.</p>
+  <section id="short-term">
+    <h2>Short-term memory: one session, shared across harnesses</h2>
+    <p class="section-note">Every harness keeps its own native conversation log, independently of Omnigent. Omnigent keeps a second, separate record in parallel — and that second record is what actually gets shared when a harness switch happens.</p>
 
+    <h3>Each harness already has its own log</h3>
+    <div class="two-col">
+      <figure style="margin:0;">
+        <figcaption>Pi — <span class="mono">~/.pi/agent/sessions/&lt;dir&gt;/&lt;timestamp&gt;_&lt;uuid&gt;.jsonl</span></figcaption>
+        <pre>{"id":"m1","parentId":null,"role":"user","content":"..."}
+{"id":"m2","parentId":"m1","role":"assistant","content":"..."}
+<span class="comment">tree-structured: id / parentId allow branching
+without rewriting the file</span></pre>
+      </figure>
+      <figure style="margin:0;">
+        <figcaption>Claude Code — <span class="mono">~/.claude/projects/&lt;slug&gt;/&lt;session-id&gt;.jsonl</span></figcaption>
+        <pre>{"type":"user","message":{...},"ts":"..."}
+{"type":"assistant","message":{...},"ts":"..."}
+<span class="comment">flat, append-only: one line per message,
+tool call, or metadata event</span></pre>
+      </figure>
+    </div>
+    <p>Both are real, both are JSONL, and both use different internal schemas. Neither format is something the other harness — or anything outside that harness — reads directly.</p>
+
+    <h3>In parallel, Omnigent keeps its own copy</h3>
+    <p>Regardless of which harness is running, every turn is also translated into a single common shape and written into the session record Omnigent owns:</p>
     <figure>
-      <figcaption><span class="path">agents/pi.yaml — adding memory tools</span><span class="badge documented">Documented</span></figcaption>
-      <pre>name: pi_agent
-executor:
-  harness: pi
-tools:
-  builtins:
-    - name: hindsight_recall
-      api_key: <span class="dim">${HINDSIGHT_API_KEY}</span>
-      bank_id: <span class="v">hypatia-session-memory</span>   <span class="comment"># same id in claude.yaml → shared bank</span>
-      budget: mid
-    - name: hindsight_retain
-      api_key: <span class="dim">${HINDSIGHT_API_KEY}</span>
-      bank_id: <span class="v">hypatia-session-memory</span></pre>
+      <figcaption>Omnigent's normalized message — the only shape the session store ever sees</figcaption>
+      <pre>{
+  <span class="k">"role"</span>: <span class="v">"user"</span>,          <span class="comment">// system | user | assistant | tool_call | tool_result</span>
+  <span class="k">"content"</span>: <span class="v">"..."</span>,
+  <span class="k">"timestamp"</span>: <span class="v">"..."</span>,
+  <span class="k">"source"</span>: <span class="k">null</span>,
+  <span class="k">"metadata"</span>: {}
+}</pre>
     </figure>
 
     <div class="pipeline">
-      <div class="pnode"><span class="t">Agent calls</span><span class="n">hindsight_recall</span></div>
+      <div class="pnode"><span class="t">Native log</span><span class="n">Pi's own JSONL</span></div>
       <div class="parrow">→</div>
-      <div class="pnode hub"><span class="t">Intercepted by</span><span class="n">Omnigent runner</span></div>
-      <div class="parrow">→</div>
-      <div class="pnode"><span class="t">Executed via</span><span class="n">hindsight-client</span></div>
-      <div class="parrow">→</div>
-      <div class="pnode"><span class="t">Own store</span><span class="n">Hindsight Postgres</span></div>
+      <div class="pnode hub"><span class="t">Runner translates</span><span class="n">Common message</span></div>
+      <div class="parrow">←</div>
+      <div class="pnode"><span class="t">Native log</span><span class="n">Claude's own JSONL</span></div>
     </div>
-
-    <p>Two Postgres databases doing two different jobs. The session store above records every turn, every conversation, forever, harness-agnostic. Hindsight's bank stores distilled facts, reachable across conversations, only when the agent decides to call <code class="inline">recall</code>/<code class="inline">retain</code>. They don't share tables — only the same <code class="inline">bank_id</code> convention ties Pi's and Claude's calls to the same long-term memory.</p>
+    <p style="margin-top:14px;">The common message is what gets stored in the session's persistence layer (Postgres or SQLite). That store is the actual shared memory — not either harness's own log.</p>
   </section>
 
-  <section>
-    <h2>Takeaways</h2>
+  <section id="switching">
+    <h2>What happens when the harness switches</h2>
+    <p class="section-note">Switching harness mid-session means the session's existing memory has to become visible to a harness that has never seen it before.</p>
+
+    <ol class="steps">
+      <li>A switch request is issued for the active session, naming the target harness (for example, Pi → Claude).</li>
+      <li>Omnigent looks up the session's stored history — the common-format record accumulated so far, independent of which harness produced it.</li>
+      <li>A new executor is started for the target harness.</li>
+      <li>Omnigent reconstructs that history <b>inside the target harness's own native session format</b> — not as extra prompt text, but written into its own log, so the harness's normal context-loading behaves as if it had been running the whole conversation itself.</li>
+      <li>The session record is updated with a marker confirming history was carried across.</li>
+      <li>The new harness responds with full awareness of everything said so far, including turns produced by the previous harness.</li>
+    </ol>
+
+    <figure>
+      <figcaption>Switch response — confirms history was carried</figcaption>
+      <pre>{
+  <span class="k">"agent_name"</span>: <span class="v">"pi-native"</span>,
+  <span class="k">"harness"</span>: <span class="v">"pi-native"</span>,
+  <span class="k">"labels"</span>: {
+    <span class="k">"omnigent.fork.carry_history"</span>: <span class="v">"1"</span>
+  }
+}</pre>
+    </figure>
+
+    <div class="callout"><b>The unit of memory is the session, not the harness.</b> A harness never owns the conversation — it's handed a reconstruction of it on demand. That's what makes "one memory across multiple harnesses" possible without either harness needing to know about the other.</div>
+
+    <div class="callout caution"><b>Known limitation.</b> Step 4 depends on the new executor being able to read the source harness's environment. In sandboxed or isolated-compute setups, a fork that provisions a brand-new sandbox may not have access to the original session's native log, and the reconstruction can silently fail — the new harness then starts with no carried history. Worth testing explicitly under whatever sandboxing model is chosen for a production deployment.</div>
+  </section>
+
+  <section id="long-term">
+    <h2>Long-term memory: Hindsight is the only native integration</h2>
+    <p class="section-note">As of now, Hindsight is the only long-term memory provider with first-party support in Omnigent. No other memory provider ships as a built-in.</p>
+
+    <p>It's added as three built-in tools, configured per agent:</p>
+    <figure>
+      <figcaption>agent configuration — memory tools</figcaption>
+      <pre>tools:
+  builtins:
+    - name: hindsight_recall
+      bank_id: <span class="v">shared-memory</span>   <span class="comment">// same id on every harness → shared bank</span>
+      budget: mid
+    - name: hindsight_retain
+      bank_id: <span class="v">shared-memory</span>
+    - name: hindsight_reflect
+      bank_id: <span class="v">shared-memory</span></pre>
+    </figure>
+
+    <p>These tools are intercepted and executed by the Omnigent runner directly — before the call ever reaches the harness. That's what makes it work with any harness Omnigent wraps, including ones with no memory feature of their own: the harness only needs to see three ordinary tools in its tool list, decide when to call them, and read the result back.</p>
+
+    <p>Sharing works the same way as the short-term case, but at a different layer: point every agent's <code class="inline">bank_id</code> at the same value, and every harness reads and writes the same long-term bank. Unlike the session record, this memory survives after the session ends and is retrievable from an entirely separate, future session.</p>
+  </section>
+
+  <section id="mem0">
+    <h2>If Mem0 is considered instead</h2>
+    <p class="section-note">Mem0 has no equivalent native integration with Omnigent today.</p>
+
+    <p>Mem0 ships as an MCP server. Omnigent supports declaring MCP servers per agent, so Mem0 can be added the same way any external tool is added — but that's a materially different arrangement from Hindsight's runner-level interception:</p>
+
     <ul class="takeaways">
-      <li>Both harnesses' native state — Pi's RPC session, Claude's <code class="inline">.jsonl</code> rollout — stays exactly where it is. Omnigent never merges them directly.</li>
-      <li>Translation happens once, into <code class="inline">omnigent.Message</code>, and that's the only shape the Session and the database ever store.</li>
-      <li><code class="inline">switch-agent</code> is the real mechanism for carrying conversation across a harness switch — <code class="inline">carry_history: "1"</code> confirms it. Driving executors directly, like our prototype did, skips it entirely.</li>
-      <li>Storage is Postgres or SQLite only, schema-based. No native Mongo path — mirroring to Mongo is the Control Plane's job, not Omnigent's.</li>
-      <li>Hindsight adds a second, separate Postgres store for long-term recall, reachable by any harness that shares the same <code class="inline">bank_id</code>.</li>
+      <li>No automatic interception. The harness itself must support and choose to call the MCP tool — Omnigent doesn't execute it on the harness's behalf.</li>
+      <li>Cross-harness sharing isn't structural. It depends on every agent's MCP config pointing at the same Mem0 user/namespace, set up manually — nothing enforces this the way <code class="inline">bank_id</code> does for Hindsight.</li>
+      <li>No storage lock-in. Mem0 lets you bring your own vector database; Hindsight is Postgres-only.</li>
+      <li>Larger ecosystem, more retrieval maturity outside of Omnigent specifically — relevant if Mem0 is already used elsewhere in the stack.</li>
     </ul>
+
+    <p>In short: Hindsight is the lower-effort path specifically because Omnigent already wired it in. Mem0 is viable but means building and maintaining the cross-harness sharing behavior that Hindsight gets by default.</p>
+  </section>
+
+  <section id="summary">
+    <h2>Summary</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>Short-term (session)</th><th>Long-term (Hindsight)</th><th>Long-term (Mem0)</th></tr></thead>
+        <tbody>
+          <tr><td class="field">Integration</td><td>Built into Omnigent core</td><td>Native, runner-level</td><td>Via MCP, harness-level</td></tr>
+          <tr><td class="field">Storage</td><td>Postgres or SQLite</td><td>Postgres only</td><td>Bring your own</td></tr>
+          <tr><td class="field">Cross-harness sharing</td><td>Automatic (one session)</td><td>Automatic (shared bank_id)</td><td>Manual (shared namespace)</td></tr>
+          <tr><td class="field">MongoDB support</td><td>None</td><td>None</td><td>Depends on chosen vector store</td></tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <footer>
-    Sources: <a href="https://github.com/omnigent-ai/omnigent">omnigent-ai/omnigent</a> ·
-    <a href="https://omnigent.ai/docs/deploy/database">Omnigent — Database docs</a> ·
-    <a href="https://hindsight.vectorize.io/sdks/integrations/omnigent">Hindsight — Omnigent integration</a> ·
-    plus direct testing against a locally running Omnigent server in this project, 2026-09-15.
+    References
+    <ol>
+      <li><a href="https://github.com/omnigent-ai/omnigent">omnigent-ai/omnigent</a> — architecture, executor model</li>
+      <li><a href="https://omnigent.ai/docs/deploy/database">Omnigent docs — Database</a> — storage backends</li>
+      <li><a href="https://hindsight.vectorize.io/sdks/integrations/omnigent">Hindsight — Omnigent integration</a> — builtin tool wiring</li>
+      <li><a href="https://hindsight.vectorize.io/blog/2026/07/16/bank-strategy-agent-memory">Hindsight — bank strategy guide</a></li>
+      <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/session-format.md">Pi — session file format</a></li>
+      <li><a href="https://github.com/frederick-douglas-pearce/claude-code-sessions">Claude Code — JSONL session format reference</a></li>
+      <li><a href="https://docs.mem0.ai/platform/features/mcp-integration">Mem0 — MCP integration</a></li>
+    </ol>
   </footer>
 
 </div>
