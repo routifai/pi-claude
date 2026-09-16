@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Per-Harness Extensions in Omnigent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html{color-scheme: light dark;}
+  :root{
+    --bg:#EEF0F3; --surface:#FFFFFF; --surface-2:#F7F8FA; --border:#D6DAE1;
+    --text:#171A21; --text-dim:#5B6472;
+    --accent:#2B6E8C; --accent-strong:#1F5570; --accent-soft:#E4EEF2;
+    --good-bg:#E4F3E9; --good-fg:#1E6B41;
+    --warn-bg:#FBF1E1; --warn-fg:#8A5A16;
+    --bad-bg:#FBE9E9; --bad-fg:#9A3232;
+    --term-bg:#181B22; --term-fg:#D6DCE5; --term-dim:#7C8698; --term-accent:#7FD1A8; --term-key:#E3AE5E;
+    --shadow: 0 1px 2px rgba(23,26,33,.06), 0 6px 20px rgba(23,26,33,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12151B; --surface:#1A1E26; --surface-2:#20242D; --border:#2C313C;
+      --text:#E7EAEF; --text-dim:#9BA3B0;
+      --accent:#6FB6D6; --accent-strong:#8FCBE6; --accent-soft:#1E323C;
+      --good-bg:#173428; --good-fg:#6FD69B;
+      --warn-bg:#332A16; --warn-fg:#E3AE5E;
+      --bad-bg:#3A2020; --bad-fg:#EA9494;
+      --term-bg:#0E1015; --term-fg:#D6DCE5; --term-dim:#6B7482; --term-accent:#7FD1A8; --term-key:#E3AE5E;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12151B; --surface:#1A1E26; --surface-2:#20242D; --border:#2C313C;
+    --text:#E7EAEF; --text-dim:#9BA3B0;
+    --accent:#6FB6D6; --accent-strong:#8FCBE6; --accent-soft:#1E323C;
+    --good-bg:#173428; --good-fg:#6FD69B;
+    --warn-bg:#332A16; --warn-fg:#E3AE5E;
+    --bad-bg:#3A2020; --bad-fg:#EA9494;
+    --term-bg:#0E1015; --term-fg:#D6DCE5; --term-dim:#6B7482; --term-accent:#7FD1A8; --term-key:#E3AE5E;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    padding-inline:20px; padding-block:48px 80px; line-height:1.65;
+  }
+  .wrap{max-width:920px; margin-inline:auto;}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+
+  .eyebrow{
+    font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:12px;
+  }
+  h1{font-size:clamp(26px,4vw,37px); font-weight:700; letter-spacing:-.01em; text-wrap:balance; margin:0 0 16px;}
+  .dek{color:var(--text-dim); font-size:16px; max-width:70ch; margin:0;}
+
+  nav.toc{
+    display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:26px;
+    padding:14px 16px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; font-size:13px;
+  }
+  nav.toc a{color:var(--accent-strong); text-decoration:none; font-weight:500;}
+  nav.toc a:hover{text-decoration:underline;}
+  nav.toc span.sep{color:var(--border);}
+
+  section{margin-top:50px; scroll-margin-top:20px;}
+  h2{font-size:20px; font-weight:700; margin:0 0 6px; letter-spacing:-.005em; text-wrap:balance;}
+  h3{font-size:14.5px; font-weight:600; margin:24px 0 10px; color:var(--text);}
+  .section-note{color:var(--text-dim); font-size:14.5px; margin:0 0 20px; max-width:70ch;}
+  p{margin:0 0 12px; font-size:15px;}
+  p:last-child{margin-bottom:0;}
+
+  figure{margin:16px 0 22px; border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:var(--shadow);}
+  figcaption{
+    padding:9px 14px; background:var(--surface-2); border-bottom:1px solid var(--border);
+    font-family:"IBM Plex Mono", monospace; font-size:12px; color:var(--text-dim);
+  }
+  pre{
+    margin:0; padding:16px 18px; background:var(--term-bg); color:var(--term-fg);
+    font-family:"IBM Plex Mono", monospace; font-size:12.6px; line-height:1.65;
+    overflow-x:auto; white-space:pre;
+  }
+  pre .dim{color:var(--term-dim);}
+  pre .k{color:var(--term-key);}
+  pre .v{color:var(--term-accent);}
+  pre .comment{color:var(--term-dim); font-style:italic;}
+
+  code.inline{
+    font-family:"IBM Plex Mono", monospace; font-size:.9em;
+    background:var(--surface-2); border:1px solid var(--border);
+    padding:1px 6px; border-radius:5px;
+  }
+
+  .callout{
+    background:var(--accent-soft); border:1px solid var(--accent); border-radius:10px;
+    padding:14px 16px; font-size:14px; margin:14px 0 22px;
+  }
+  .callout b{color:var(--text);}
+  .callout.good{background:var(--good-bg); border-color:var(--good-fg);}
+  .callout.caution{background:var(--warn-bg); border-color:var(--warn-fg);}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:var(--shadow);}
+  table{border-collapse:collapse; width:100%; min-width:520px; font-size:13.5px;}
+  thead th{
+    text-align:left; font-family:"IBM Plex Mono", monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--text-dim); font-weight:600; padding:11px 14px;
+    border-bottom:1px solid var(--border); background:var(--surface-2);
+  }
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody td.field{font-family:"IBM Plex Mono", monospace; font-weight:500; white-space:nowrap;}
+  .v{display:inline-block; font-size:12.5px; font-weight:600; padding:3px 9px; border-radius:6px;}
+  .v.good{background:var(--good-bg); color:var(--good-fg);}
+  .v.bad{background:var(--bad-bg); color:var(--bad-fg);}
+  .v.warn{background:var(--warn-bg); color:var(--warn-fg);}
+
+  ul.takeaways{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px;}
+  ul.takeaways li{padding-left:22px; position:relative; font-size:14.5px;}
+  ul.takeaways li::before{content:"→"; position:absolute; left:0; color:var(--accent); font-weight:600;}
+
+  footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-dim);}
+  footer ol{margin:8px 0 0; padding-left:18px;}
+  footer li{margin-bottom:4px;}
+  footer a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Hypatia · Reference</div>
+  <h1>Registering Tools and Overriding Behavior Per Harness</h1>
+  <p class="dek">Two extension points in Omnigent: giving a specific harness custom tools, and giving a specific harness behavior it doesn't have natively — using Pi's missing "plan mode" as the worked example. Covers the documented path, where it stops, and what has to be wired manually when driving executors directly instead of through Omnigent's full server/session runtime.</p>
+
+  <nav class="toc">
+    <a href="#background">Background</a><span class="sep">/</span>
+    <a href="#tools">Custom tools</a><span class="sep">/</span>
+    <a href="#skills">Skills</a><span class="sep">/</span>
+    <a href="#behavior">Behavior overrides</a><span class="sep">/</span>
+    <a href="#summary">Summary</a><span class="sep">/</span>
+    <a href="#recommendation">Recommendation</a>
+  </nav>
+
+  <section id="background">
+    <h2>Background: Omnigent's real extension points</h2>
+    <p class="section-note">Two documented mechanisms are relevant here, both designed for Omnigent's full server/session runtime.</p>
+    <ul class="takeaways">
+      <li><b>Custom Agents</b> — attach Python-function-backed tools to an agent via YAML.</li>
+      <li><b>Contextual Policies</b> — Python functions that intercept every tool call, LLM request, or file operation and decide <code class="inline">ALLOW</code> / <code class="inline">ASK</code> / <code class="inline">DENY</code>, in real time, across any harness.</li>
+    </ul>
+    <div class="callout"><b>The gap this document covers:</b> when driving a harness executor directly (<code class="inline">ClaudeSDKExecutor</code>, <code class="inline">PiExecutor</code>, etc.) rather than through the full runtime, the YAML resolves correctly, but the automatic wiring these features rely on has to be reproduced by hand.</div>
+  </section>
+
+  <section id="tools">
+    <h2>Registering custom tools per harness</h2>
+
+    <h3>The documented pattern</h3>
+    <figure>
+      <figcaption>agent.yaml</figcaption>
+      <pre>name: my_agent
+executor:
+  harness: pi          <span class="comment"># or claude-sdk, codex, etc.</span>
+tools:
+  get_secret_code:
+    type: function
+    callable: my_package.tools.get_secret_code</pre>
+    </figure>
+    <p><code class="inline">load_agent_def()</code> resolves the <code class="inline">callable</code> string into a real, live Python function reference automatically:</p>
+    <figure>
+      <figcaption>python</figcaption>
+      <pre><span class="k">from</span> omnigent <span class="k">import</span> load_agent_def
+
+agent_def = load_agent_def(<span class="v">"agent.yaml"</span>)
+agent_def.tools
+<span class="comment"># {'get_secret_code': FunctionTool(name='get_secret_code', ...,
+#   callable=&lt;function get_secret_code at 0x...&gt;)}</span></pre>
+    </figure>
+
+    <h3>The gap at the executor level</h3>
+    <p><code class="inline">run_turn()</code> does not accept <code class="inline">FunctionTool</code> objects directly — it expects a plain dict schema, and even then, nothing routes an incoming call back to the function without one more step:</p>
+    <figure>
+      <figcaption>python — building the schema and wiring execution</figcaption>
+      <pre>tool_dicts = [{
+    <span class="v">"name"</span>: name,
+    <span class="v">"description"</span>: ft.description <span class="k">or</span> <span class="v">f"Call {name}"</span>,
+    <span class="v">"input_schema"</span>: ft.input_schema <span class="k">or</span> {<span class="v">"type"</span>: <span class="v">"object"</span>, <span class="v">"properties"</span>: {}},
+} <span class="k">for</span> name, ft <span class="k">in</span> agent_def.tools.items()]
+
+executor = PiExecutor(agent_name=agent_def.name)
+executor._tool_executor = dispatcher   <span class="comment"># private attribute — no constructor
+                                        # parameter or public setter exists</span></pre>
+    </figure>
+
+    <h3>A working dispatcher</h3>
+    <figure>
+      <figcaption>python</figcaption>
+      <pre>callables_by_name = {name: ft.callable <span class="k">for</span> name, ft <span class="k">in</span> agent_def.tools.items()}
+
+<span class="k">def</span> dispatcher(name, args):
+    fn = callables_by_name[name]
+    <span class="k">return</span> {<span class="v">"content"</span>: [{<span class="v">"type"</span>: <span class="v">"text"</span>, <span class="v">"text"</span>: str(fn(**args))}]}
+
+executor._tool_executor = dispatcher</pre>
+    </figure>
+    <div class="callout good"><b>Confirmed working end-to-end for Pi:</b> a real <code class="inline">ToolCallRequest</code> → <code class="inline">ToolCallComplete(status=SUCCESS)</code> → the harness's final answer containing the exact value the Python function returned.</div>
+
+    <h3>One contract difference between harnesses</h3>
+    <p>Pi's tool-executor callback accepts either a synchronous or an <code class="inline">async</code> function. Claude's requires <code class="inline">async</code> — a synchronous dispatcher fails with <code class="inline">"object dict can't be used in 'await' expression"</code>. Use an <code class="inline">async def dispatcher(...)</code> for anything that needs to work across both.</p>
+
+    <h3>One delivery difference between harnesses</h3>
+    <p>Confirmed working for Claude too, but through a different mechanism: Claude surfaces custom tools as MCP-style tools, discovered dynamically via its own tool-search call (<code class="inline">mcp__omnigent__&lt;tool_name&gt;</code>), rather than a direct tool list the way Pi receives them. Same YAML input, same dispatcher pattern, different internal transport.</p>
+  </section>
+
+  <section id="skills">
+    <h2>Registering skills per harness</h2>
+    <p class="section-note">Skills (self-contained directories with a <code class="inline">SKILL.md</code> file) load through a separate, undocumented-at-the-executor-level path: the <code class="inline">bundle_dir</code> constructor parameter.</p>
+    <figure>
+      <figcaption>python</figcaption>
+      <pre>executor = PiExecutor(
+    agent_name=<span class="v">"my_agent"</span>,
+    bundle_dir=pathlib.Path(<span class="v">"/path/to/bundle"</span>),  <span class="comment"># expects &lt;bundle_dir&gt;/skills/&lt;name&gt;/SKILL.md</span>
+    skills_filter=<span class="v">"all"</span>,   <span class="comment"># default; also accepts "none" or a list of names</span>
+)</pre>
+    </figure>
+    <p>Internally, the resolver walks <code class="inline">&lt;bundle_dir&gt;/skills/</code> and appends a <code class="inline">--skill &lt;path&gt;</code> flag for every subdirectory containing a <code class="inline">SKILL.md</code>. <code class="inline">skills_filter="all"</code> (the default) adds every bundled skill explicitly <i>and</i> leaves the harness's own auto-discovery running.</p>
+    <div class="callout caution"><b>Do not trust the harness's own self-report.</b> Asking it directly ("what skills do you have?") can return "none" even when skills are correctly loaded and actively shaping the response. Confirm by inspecting the executor's actually-resolved CLI arguments directly, or by giving it a task that should invoke the skill's real content and checking whether the response reflects that content.</div>
+  </section>
+
+  <section id="behavior">
+    <h2>Overriding behavior per harness: the plan-mode case</h2>
+
+    <h3>Claude has a native switch</h3>
+    <figure>
+      <figcaption>python</figcaption>
+      <pre>executor = ClaudeSDKExecutor(agent_name=<span class="v">"my_agent"</span>, permission_mode=<span class="v">"plan"</span>)</pre>
+    </figure>
+    <p>Confirmed to genuinely change behavior: under <code class="inline">permission_mode="plan"</code>, the executor attempts an <code class="inline">ExitPlanMode</code> tool call and writes a plan document instead of performing the requested edit directly.</p>
+
+    <h3>Pi has no equivalent</h3>
+    <p>No <code class="inline">permission_mode</code> parameter, no reference to plan/permission modes anywhere in Pi's executor source — confirmed by inspection, not just absence of documentation. Asking the harness directly reports zero modes available, consistent with the source. A genuinely missing capability, not an undiscovered wiring path.</p>
+
+    <h3>The real extension point: Contextual Policies</h3>
+    <p>Omnigent's documented Policy system is the right shape for this, and it's harness-agnostic by design:</p>
+    <figure>
+      <figcaption>python</figcaption>
+      <pre><span class="k">from</span> omnigent.policies.schema <span class="k">import</span> PolicyEvent, PolicyResponse
+
+<span class="k">def</span> my_policy(event: PolicyEvent) -&gt; PolicyResponse | <span class="k">None</span>:
+    <span class="k">if</span> event[<span class="v">"type"</span>] != <span class="v">"tool_call"</span>:
+        <span class="k">return</span> <span class="k">None</span>
+    <span class="k">if</span> event[<span class="v">"data"</span>][<span class="v">"name"</span>] <span class="k">in</span> {<span class="v">"write_file"</span>, <span class="v">"edit_file"</span>}:
+        <span class="k">return</span> {<span class="v">"result"</span>: <span class="v">"DENY"</span>, <span class="v">"reason"</span>: <span class="v">"writes blocked"</span>}
+    <span class="k">return</span> {<span class="v">"result"</span>: <span class="v">"ALLOW"</span>}</pre>
+    </figure>
+    <div class="callout"><code class="inline">event["context"]</code> includes <code class="inline">harness</code> — a single policy function can branch on which harness is running and apply different rules to each, from one place. This is the documented per-harness override mechanism.</div>
+    <figure>
+      <figcaption>agent.yaml — registration</figcaption>
+      <pre>policy_modules:
+  - my_package.policies
+
+policies:
+  confine_writes:
+    type: function
+    handler: my_package.policies.confine_writes</pre>
+    </figure>
+
+    <h3>Reproducing it at the executor level</h3>
+    <p>The Policy engine normally intercepts events through Omnigent's full Session/server runtime. Driving <code class="inline">PiExecutor</code> directly means the same interception has to happen inside the tool dispatcher built above — same mechanism, one level down:</p>
+    <figure>
+      <figcaption>python</figcaption>
+      <pre><span class="k">def</span> make_policy_dispatcher(harness: str, mode: str):
+    <span class="k">def</span> dispatcher(name, args):
+        <span class="k">if</span> harness == <span class="v">"pi"</span> <span class="k">and</span> mode == <span class="v">"plan"</span> <span class="k">and</span> name <span class="k">in</span> WRITE_TOOLS:
+            <span class="k">return</span> {<span class="v">"content"</span>: [{<span class="v">"type"</span>: <span class="v">"text"</span>,
+                                <span class="v">"text"</span>: <span class="v">'{"error":"DENIED by plan-mode policy"}'</span>}],
+                    <span class="v">"isError"</span>: <span class="k">True</span>}
+        <span class="k">return</span> execute(name, args)
+    <span class="k">return</span> dispatcher</pre>
+    </figure>
+    <div class="callout good"><b>Confirmed working:</b> under <code class="inline">mode="plan"</code>, a write call was denied, and the harness's own final response correctly explained the write was blocked and proposed an alternative — the same shape of behavior Claude's native plan mode produces, built from nothing for a harness that has no native concept of it.</div>
+  </section>
+
+  <section id="summary">
+    <h2>Summary: native vs. manually wired, per harness</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Capability</th><th>Claude</th><th>Pi</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="field">Custom tools</td>
+            <td><span class="v good">Works</span> — dict conversion + <code class="inline">_tool_executor</code>, async required</td>
+            <td><span class="v good">Works</span> — same wiring, sync or async</td>
+          </tr>
+          <tr>
+            <td class="field">Skills</td>
+            <td>Not tested</td>
+            <td><span class="v good">Works</span> — <code class="inline">bundle_dir</code> → auto-resolved <code class="inline">--skill</code> flags</td>
+          </tr>
+          <tr>
+            <td class="field">Plan/permission mode</td>
+            <td><span class="v good">Native</span> — <code class="inline">permission_mode</code> constructor param</td>
+            <td><span class="v bad">Not native</span> — no such parameter anywhere in source</td>
+          </tr>
+          <tr>
+            <td class="field">Plan-mode-equivalent</td>
+            <td>N/A, already native</td>
+            <td><span class="v warn">Achievable</span> — via policy-style check in the dispatcher</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px;">The pattern repeats across every capability tested: the underlying capability generally exists, but driving an executor directly instead of through Omnigent's full session runtime means whatever that runtime normally wires automatically has to be built by hand, at the same interception points the runtime itself would use.</p>
+  </section>
+
+  <section id="recommendation">
+    <h2>Recommended pattern going forward</h2>
+    <p class="section-note">Rather than wiring <code class="inline">_tool_executor</code> ad hoc per agent, a small shared helper is worth building once.</p>
+    <figure>
+      <figcaption>python</figcaption>
+      <pre><span class="k">def</span> build_dispatcher(agent_def, harness: str, policy_fn=<span class="k">None</span>):
+    <span class="comment">"""Combines YAML-registered tools with an optional harness-aware policy check."""</span>
+    callables_by_name = {name: ft.callable <span class="k">for</span> name, ft <span class="k">in</span> agent_def.tools.items()}
+
+    <span class="k">async def</span> dispatcher(name, args):
+        <span class="k">if</span> policy_fn:
+            decision = policy_fn(harness=harness, name=name, args=args)
+            <span class="k">if</span> decision <span class="k">and</span> decision[<span class="v">"result"</span>] == <span class="v">"DENY"</span>:
+                <span class="k">return</span> {<span class="v">"content"</span>: [{<span class="v">"type"</span>: <span class="v">"text"</span>, <span class="v">"text"</span>: decision[<span class="v">"reason"</span>]}],
+                        <span class="v">"isError"</span>: <span class="k">True</span>}
+        fn = callables_by_name[name]
+        result = fn(**args)
+        <span class="k">return</span> {<span class="v">"content"</span>: [{<span class="v">"type"</span>: <span class="v">"text"</span>, <span class="v">"text"</span>: str(result)}]}
+
+    <span class="k">return</span> dispatcher</pre>
+    </figure>
+    <p>This keeps tool registration and behavior overrides in one reusable place, keyed by harness, matching the shape of Omnigent's own documented Policy system closely enough that migrating to the full server runtime later — if that becomes the right call — is a drop-in change rather than a rewrite.</p>
+  </section>
+
+  <footer>
+    References
+    <ol>
+      <li><a href="https://omnigent.ai/docs/use/custom-agents">Custom Agents · Omnigent docs</a></li>
+      <li><a href="https://omnigent.ai/docs/policies/overview">Contextual Policies · Omnigent docs</a></li>
+      <li><a href="https://omnigent.ai/docs/policies/custom">Custom Policies · Omnigent docs</a></li>
+      <li><a href="https://github.com/omnigent-ai/omnigent/blob/main/docs/AGENT_YAML_SPEC.md">AGENT_YAML_SPEC · omnigent-ai/omnigent</a></li>
+      <li><a href="https://www.databricks.com/blog/contextual-policies-omnigent-using-session-state-better-govern-ai-agents">Contextual Policies in Omnigent — Databricks Blog</a></li>
+      <li><a href="https://github.com/omnigent-ai/omnigent">omnigent-ai/omnigent — GitHub</a></li>
+    </ol>
+  </footer>
+
+</div>
+</body>
+</html>
