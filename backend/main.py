@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
+import yaml
 from omnigent import load_agent_def, ClaudeSDKExecutor
 from omnigent.inner.pi_executor import PiExecutor
 import pathlib
@@ -67,17 +68,51 @@ PLAN_MODE_INSTRUCTION = (
     "you would do to fulfill the request, then stop. Do not execute the plan."
 )
 
-# Pi's own native plan-mode extension (npm:@narumitw/pi-plan-mode), if
-# installed. Loaded via Pi's real "--extension <path>" mechanism - the
-# same one omnigent itself uses internally to bridge its own tools into
-# Pi - plus the "--plan" CLI flag the extension registers once loaded.
-# Confirmed by direct testing: this produces genuine native plan-mode
-# output (structured Plan/Summary/Verification sections, refuses to
-# write files, offers to finalize the plan instead), not a prompt trick.
-PI_PLAN_MODE_EXTENSION = (
-    pathlib.Path.home() / ".pi" / "agent" / "npm" / "node_modules"
-    / "@narumitw" / "pi-plan-mode" / "src" / "index.ts"
-)
+# --- Pi-only plan-mode augmentation -----------------------------------
+# Claude needs nothing here: its plan mode is native to claude-sdk
+# (ClaudeSDKExecutor's own `permission_mode` parameter, set below).
+# Pi has no native equivalent, so its plan mode comes from loading its
+# real, installed extension (npm:@narumitw/pi-plan-mode) via Pi's own
+# "--extension <path>" CLI mechanism, plus the "--plan" flag that
+# extension registers once loaded. Confirmed by direct testing: this
+# produces genuine native plan-mode output (structured Plan/Summary/
+# Verification, refuses to write files, offers to finalize), not a
+# text substitute.
+#
+# The extension path is sourced from omnigent's own documented config
+# location - harness.pi-native.args in .omnigent/config.yaml - not
+# hardcoded here. See .omnigent/config.yaml at the project root.
+# https://omnigent.ai/docs/build/harnesses/configuration
+
+def load_pi_native_args() -> list[str]:
+    """Read harness.pi-native.args from omnigent's own config file.
+
+    Project config (.omnigent/config.yaml) takes precedence over user
+    config (~/.omnigent/config.yaml), matching omnigent's own documented
+    precedence. Omnigent's *server* reads this same key when it launches
+    a native harness session; this backend drives PiExecutor directly
+    instead, so reading the file here doesn't get it "for free" from the
+    server - it lets the extension's path live in one config file that
+    means the same thing whether Pi is launched by this backend or,
+    eventually, by the real server.
+    """
+    for config_path in (
+        PROJECT_ROOT / ".omnigent" / "config.yaml",
+        pathlib.Path.home() / ".omnigent" / "config.yaml",
+    ):
+        if not config_path.is_file():
+            continue
+        try:
+            config = yaml.safe_load(config_path.read_text()) or {}
+        except yaml.YAMLError:
+            continue
+        args = config.get("harness", {}).get("pi-native", {}).get("args", [])
+        if args:
+            return args
+    return []
+
+
+PI_NATIVE_ARGS = load_pi_native_args()
 
 
 def build_history_messages(session: dict) -> list[dict]:
@@ -108,12 +143,11 @@ async def get_harness_reply(session_id: str, harness: str, session: dict) -> str
             return f"Error: No executor for harness {harness_type}"
 
         plan_mode = session.get("plan_mode", False)
+        pi_augmentation_available = harness_type == "pi" and bool(PI_NATIVE_ARGS)
 
         # Executor cache key includes plan_mode: Claude's permission_mode is
         # set at construction time, so toggling plan mode needs a fresh
         # executor instance to actually take effect.
-        pi_extension_available = harness_type == "pi" and PI_PLAN_MODE_EXTENSION.is_file()
-
         executor_key = (session_id, harness, plan_mode)
         if executor_key not in executors:
             kwargs = {"agent_name": agent_def.name}
@@ -123,11 +157,10 @@ async def get_harness_reply(session_id: str, harness: str, session: dict) -> str
                 # editing directly). Confirmed by direct testing.
                 kwargs["permission_mode"] = "plan" if plan_mode else "auto"
             executor = executor_class(**kwargs)
-            if plan_mode and pi_extension_available:
-                # Real Pi extension, loaded the same way omnigent loads its
-                # own tool-bridge extension into Pi. "--plan" is the CLI
-                # flag the extension itself registers once loaded.
-                executor._extra_args.extend(["--extension", str(PI_PLAN_MODE_EXTENSION), "--plan"])
+            if plan_mode and pi_augmentation_available:
+                # Pi-only: append harness.pi-native.args from
+                # .omnigent/config.yaml (--extension <path> --plan).
+                executor._extra_args.extend(PI_NATIVE_ARGS)
             executors[executor_key] = executor
 
         executor = executors[executor_key]
@@ -137,7 +170,7 @@ async def get_harness_reply(session_id: str, harness: str, session: dict) -> str
         messages = build_history_messages(session)
 
         system_prompt = agent_def.prompt or "You are a helpful assistant."
-        if plan_mode and not pi_extension_available and harness_type != "claude-sdk":
+        if plan_mode and not pi_augmentation_available and harness_type != "claude-sdk":
             # Fallback for any harness with no native plan/permission mode
             # and no equivalent extension installed - a prompt-level
             # instruction is the harness-agnostic last resort.

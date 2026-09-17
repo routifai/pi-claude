@@ -1,0 +1,17 @@
+# Omnigent per-harness configuration.
+# https://omnigent.ai/docs/build/harnesses/configuration
+#
+# harness.<id>.args are base CLI launch args; the server prepends them
+# before any CLI pass-through args whenever it launches that harness.
+#
+# pi-native gets --extension + --plan so it loads its real, installed
+# plan-mode extension (npm:@narumitw/pi-plan-mode) instead of getting
+# an app-level prompt-injection substitute. Claude needs no entry here -
+# its plan mode is native to claude-sdk (ClaudeSDKExecutor's own
+# permission_mode parameter), not something this file controls.
+#
+# Path below is host-specific - wherever `pi install` put the package
+# on this machine. Adjust per host if it differs.
+harness:
+  pi-native:
+    args: [--extension, "/Users/simo/.pi/agent/npm/node_modules/@narumitw/pi-plan-mode/src/index.ts", --plan]

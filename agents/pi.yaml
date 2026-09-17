@@ -1,7 +1,10 @@
 name: pi_agent
 prompt: You are a helpful assistant.
 executor:
-  # Note: harness field ignored in current prototype
-  # ClaudeSDKExecutor doesn't route to Pi; uses Claude SDK for all agents
-  # Real Pi support requires: PiExecutor (pi --mode rpc) or omnigent HTTP API
+  # Backend maps this to omnigent.inner.pi_executor.PiExecutor
+  # (real pi --mode rpc, not ClaudeSDKExecutor - see backend/main.py
+  # EXECUTOR_CLASSES). Plan-mode augmentation for this harness lives in
+  # .omnigent/config.yaml (harness.pi-native.args), not here - there is
+  # no field in Omnigent's own AGENT_YAML_SPEC for declaring extensions
+  # or extra CLI args per agent, only per-harness at the config level.
   harness: pi
